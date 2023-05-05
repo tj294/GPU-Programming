@@ -1,37 +1,38 @@
-import numpy as np
-import pyopencl as cl
+import argparse
+import os
 
-a_np = np.random.rand(50000).astype(np.float32)
-b_np = np.random.rand(50000).astype(np.float32)
+import mandybrot as mandy
 
-ctx = cl.create_some_context()
-queue = cl.CommandQueue(ctx)
+OUTPUT_DIR = 'output'
 
-mf = cl.mem_flags
-a_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=a_np)
-b_g = cl.Buffer(ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=b_np)
+parser = argparse.ArgumentParser()
+parser.add_argument('real', type=float)
+parser.add_argument('imag', type=float)
+parser.add_argument('width', type=int)
+parser.add_argument('height', type=int)
+parser.add_argument('scale', type=float)
+parser.add_argument('max_iters', type=int)
+args = parser.parse_args()
 
-with open("scripts/kernel.cl", "r") as f:
-    kernel_code = f.read()
+# Create the output directory if it doesn't exist
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
-#! cat scripts/kernel.cl
-"""
-* __kernel void sum(__global const float *a_g, 
-*                       __global const float *b_g,
-*                       __global float *res_g)
-*      {
-*        int gid = get_global_id(0);
-*        res_g[gid] = a_g[gid] + b_g[gid];
-*    }
-"""
+# Sample the region
+data = mandy.sample.area(
+    args.real, args.imag, args.width, args.height, args.scale, args.max_iters
+)
 
-prg = cl.Program(ctx, kernel_code,).build()
+def display(data):
+    """
+    Display the Mandelbrot set.
+    """
+    shape = data.shape
+    buffer = ''
+    for im in reversed(range(shape[0])):
+        for re in range(shape[1]):
+            buffer += f"{data[im, re]:4.0f}     "
+        buffer += '\n'
+    print(buffer)
 
-res_g = cl.Buffer(ctx, mf.WRITE_ONLY, a_np.nbytes)
-
-knl = prg.sum
-knl(queue, a_np.shape, None, a_g, b_g, res_g)
-
-res_np = np.empty_like(a_np)
-cl.enqueue_copy(queue, res_np, res_g)
-print(res_np - (a_np + b_np))
+display(data)

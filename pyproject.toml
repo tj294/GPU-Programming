@@ -4,12 +4,12 @@ version = "0.1.0"
 description = "Programming on a GPU"
 authors = ["Tom Joshi-Cale <tj294@exeter.ac.uk>"]
 readme = "README.md"
-packages = [{include = "gpu_programming"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 pyopencl = "^2022.3.1"
 numpy = "^1.24.2"
+pillow = "^9.5.0"
 
 
 [build-system]
